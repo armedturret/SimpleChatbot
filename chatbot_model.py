@@ -341,6 +341,9 @@ class chatbot_model:
 
         self.__model.compile(optimizer=self.__optimizer, loss=self.__loss_function, metrics=[self.__accuracy])
 
+        #create a single prediction to load dlls
+        self.predict('test')
+
     #determines innaccuracy
     def __loss_function(self, y_true, y_pred):
         y_true = tf.reshape(y_true, shape=(-1, self.__MAX_LENGTH - 1))
@@ -359,6 +362,25 @@ class chatbot_model:
         # ensure labels have shape (batch_size, MAX_LENGTH - 1)
         y_true = tf.reshape(y_true, shape=(-1, self.__MAX_LENGTH - 1))
         return tf.keras.metrics.sparse_categorical_accuracy(y_true, y_pred)
+
+    #take a processed sentence than convert it back to a normal sentence
+    def __denoise(self, sentence):
+        new_sentence = ''
+
+        sentence_stated = False
+        for word in sentence.split(' '):
+            if word == 'i':
+                new_sentence += ' I'
+            elif word in '?.!,':
+                new_sentence += word
+                sentence_stated = word in '?.!'
+            elif sentence_stated:
+                new_sentence += ' ' + word.capitalize()
+                sentence_stated = False
+            else:
+                new_sentence += ' ' + word
+        
+        return new_sentence.strip()
 
     def load_from_file(self, checkpoint_path):
         self.__model.load_weights(checkpoint_path)
@@ -390,5 +412,5 @@ class chatbot_model:
 
         #convert it to a string
         output = self.tokenizer.sequences_to_texts(output)
-        return output[0]
+        return self.__denoise(output[0])
 
