@@ -14,7 +14,7 @@ loading_layout = [
     ]
 ]
 
-results = [None]
+results = [None, None]
 
 def load_model(window, results):
     from chatbot_model import chatbot_model
@@ -88,10 +88,21 @@ def calculate_delay(sentence):
 
 chat = []
 is_thinking = False
-def wait_time(window, duration, event):
-    time.sleep(duration)
-    window.write_event_value(event, '')
-    
+def wait_predict(window, results, usr_input):
+    start = time.time()
+    prediction = results[0].predict(usr_input)
+    end = time.time()
+    # calculate the artificial delay, factoring in the time taken for the actual prediction
+    delay = calculate_delay(prediction) - (start - end)
+    delay = 0 if delay < 0 else delay
+    results[1] = prediction
+    time.sleep(delay)
+    window.write_event_value('-THOUGHT-','')
+
+def wait_time(window, delay, event):
+    time.sleep(delay)
+    window.write_event_value(event,'')
+
 while True:
     event, values = window.read()
     if event == "Send" and not is_thinking:
@@ -100,18 +111,15 @@ while True:
         chat.append("You: " + usr_input)
         window["-CHAT-"].update(chat)
         window["-INPUT-"].update("")
-        #predict what to say
-        prediction = results[0].predict(usr_input)
-        delay = calculate_delay(prediction)
-        chat.append("Theodore: " + prediction)
         window["-ICON-"].update(data=THINKING)
-        threading.Thread(target=wait_time, args=(window, delay,"-THOUGHT-"), daemon=True).start()
+        threading.Thread(target=wait_predict, args=(window, results, usr_input), daemon=True).start()
         is_thinking = True
     elif event == "-THOUGHT-":
         #update the chat and reset the input
+        chat.append("Theodore: " + results[1])
         window["-CHAT-"].update(chat)
         window["-ICON-"].update(data=SPEAKING)
-        threading.Thread(target=wait_time, args=(window, delay,"-NORMAL-"), daemon=True).start()
+        threading.Thread(target=wait_time, args=(window, calculate_delay(results[1]), "-NORMAL-"), daemon=True).start()
         is_thinking = False
     elif event == "-NORMAL-" and not is_thinking:
         window["-ICON-"].update(data=NEUTRAL)

@@ -367,10 +367,11 @@ class chatbot_model:
     def __denoise(self, sentence):
         new_sentence = ''
 
-        sentence_stated = False
+        sentence_stated = True
         for word in sentence.split(' '):
             if word == 'i':
                 new_sentence += ' I'
+                sentence_stated = False
             elif word in '?.!,':
                 new_sentence += word
                 sentence_stated = word in '?.!'
